@@ -1,4 +1,4 @@
-﻿/*********************************************************************************
+/*********************************************************************************
 *
 * This program is to grab some data from the Amazon website using Selenium and
 * EPPlus to write the data into separate Excel spreadsheets. This is to grab
@@ -37,7 +37,6 @@ namespace AmazonWebScrape
         {
             driver = new EdgeDriver();
             driver.Manage().Window.Maximize();
-            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(3);
         }
 
         private static bool isElementPresent(IWebElement el, By s)
@@ -99,13 +98,13 @@ namespace AmazonWebScrape
             }
         }*/
 
-        private static void addResult(IWebDriver e, By s, List<string> r)
+        private static void addResult(By s, List<string> r)
         {
             IWebElement temp;
             if (isElementPresent(s))
             {
-                temp = e.FindElement(s);
-                r.Add(temp.GetAttribute("innerHTML").ToString());
+                temp = driver.FindElement(s);
+                r.Add(temp.Text);
             }
             else
             {
@@ -119,7 +118,7 @@ namespace AmazonWebScrape
             if (isElementPresent(e, s))
             {
                 temp = e.FindElement(s);
-                r.Add(temp.GetAttribute("innerHTML").ToString());
+                r.Add(temp.Text);
             }
             else
             {
@@ -129,57 +128,36 @@ namespace AmazonWebScrape
 
         private static void findResults()
         {
-            int resultNum = 0;
-            string prod = "";
-
-            do
+            if (isElementPresent(By.Id("atfResults")))
             {
-                prod = "//li[@id=\"result_" + resultNum + "\"]";
-                resElement = new List<string>(4);
+                element = driver.FindElement(By.Id("atfResults"));
 
-                if (!isElementPresent(By.XPath(prod)))
+                anchors = element.FindElements(By.TagName("li"));
+
+                foreach (IWebElement e in anchors)
                 {
-                    break;
+                    if (listFilter(e.Text) == false)
+                    {
+                        resElement = new List<string>();
+                        addResult(e, By.TagName("h2"), resElement);
+                        addResult(e, By.XPath("//descendant::div[1]/div[2]/span[2]"), resElement);
+                        addResult(e, By.TagName("h3"), resElement);
+                        addResult(e, By.CssSelector("span[class='a-offscreen']"), resElement);
+                        searchRes.Add(resElement);
+                    }
                 }
 
-                element = driver.FindElement(By.XPath(prod));
-                driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(0);
 
-                if (listFilter(element.Text))
+                foreach (List<string> s in searchRes)
                 {
-                    resultNum++;
+                    foreach (string ss in s)
+                    {
+                        Console.WriteLine(ss);
+                    }
+                    Console.WriteLine();
+                    Console.WriteLine();
                 }
-                else
-                {
-                    //string prodName = "//descendant::h2";
-                    addResult(element, By.TagName("h2"), resElement);
-
-                    addResult(element, By.XPath("//descendant::div[1]/div[2]/span[2]"), resElement);
-
-                    string type = "";
-                    addResult(element, By.XPath("//descendant::h3"), resElement);
-                    type = resElement.Last();
-
-                    //There are multiple lines, as I have found the location of elements to be varied at times (like those of music results)
-                    addResult(driver, By.XPath("/div/div/div/div[2]/div[2]/div[1]/div[1]/a/span[1]"), resElement);
-                    if (resElement.Last() == null && !(type.Contains("MP3")))
-                    {
-                        addResult(driver, By.XPath("/div/div/div/div[2]/div[2]/div[1]/div[2]/a/span[1]"), resElement);
-                    }
-                    else if (resElement.Last() == null)
-                    {
-                        addResult(driver, By.XPath("/div/div/div/div[2]/div[2]/div[1]/div[5]/div/span[1]"), resElement);
-                    }
-                    else if (resElement.Last() == null)
-                    {
-                        addResult(driver, By.XPath("/div/div[2]/div/div[2]/div[2]/div[1]/div[1]/a/span[1]"), resElement);
-                    }
-                    searchRes.Add(resElement);
-                    resultNum++;
-
-                }
-
-            } while (isElementPresent(By.XPath(prod)));
+            }
         }
 
         private static void goToResult()
@@ -204,13 +182,6 @@ namespace AmazonWebScrape
                     if (!(e.GetAttribute("class") == "aok-hidden"))
                         resDesc.Add(e.Text);
                 }
-
-                foreach (string s in resDesc)
-                {
-                    Console.WriteLine(s);
-                }
-                Console.WriteLine();
-                Console.WriteLine();
             }
         }
 
@@ -238,15 +209,6 @@ namespace AmazonWebScrape
                     addResult(e, By.CssSelector("div[data-hook='review-collapsed']"), revElement);
                     resReview.Add(revElement);
                     x++;
-                }
-
-                foreach (List<string> s in resReview)
-                {
-                    foreach (string ss in s)
-                    {
-                        Console.WriteLine(ss);
-                    }
-                    Console.WriteLine();
                 }
             }
         }
