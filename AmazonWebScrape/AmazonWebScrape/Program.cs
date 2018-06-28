@@ -1,45 +1,43 @@
-/*********************************************************************************
+/******************************************************************************
 *
-* This program is to grab some data from the Amazon website using Selenium and
-* EPPlus to write the data into separate Excel spreadsheets. This is to grab
-* the elementlete suggestions, as well as the first page results of the site.
-* This also filters the search results to not include ads within the results page.
-* 
-* JC5044528@Syntelinc.com
+* This is for grabbing data from an Amazon search result page
+* and storing to an Excel spreadsheet using Selenium to grab data from 
+* the browser.
 *
-**********************************************************************************/
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using OfficeOpenXml;
-using OpenQA.Selenium;
-using OpenQA.Selenium.Support.UI;
-using OpenQA.Selenium.Edge;
-using System.Collections.ObjectModel;
+******************************************************************************/
 
-namespace AmazonWebScrape
+using System;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using OpenQA.Selenium.Support.UI;
+
+namespace SeleniumTest
 {
     class Program
     {
-        private static IWebDriver driver;
-        private static IWebElement element;
-        private static ReadOnlyCollection<IWebElement> anchors;
-        private static List<string> autoSuggest = new List<string>();
-        private static List<string> resElement;
-        private static List<List<string>> searchRes = new List<List<string>>();
-        private static List<string> resDesc = new List<string>();
-        private static List<string> revElement;
-        private static List<List<string>> resReview = new List<List<string>>();
+        static IWebDriver driver;
+        static IWebElement element;
+        static ReadOnlyCollection<IWebElement> anchors;
+        static List<string> autoSuggest = new List<string>();
+        static List<string> resElement;
+        static List<List<string>> searchRes = new List<List<string>>();
+        static List<string> resDesc = new List<string>();
+        static List<string> revElement;
+        static List<List<string>> resReview = new List<List<string>>();
+        static List<string> prodRow;
+        static List<List<string>> prodInfo = new List<List<string>>();
 
-        //Initialize
-        private static void Setup()
+        static void Setup()
         {
-            driver = new EdgeDriver();
-            driver.Manage().Window.Maximize();
+            driver = new ChromeDriver();
+            driver.Manage().Window.FullScreen();
+            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(0);
         }
 
-        private static bool isElementPresent(IWebElement el, By s)
+        static bool IsElementPresent(IWebElement el, By s)
         {
             try
             {
@@ -52,8 +50,7 @@ namespace AmazonWebScrape
             }
         }
 
-
-        private static bool isElementPresent(By element)
+        static bool IsElementPresent(By element)
         {
             try
             {
@@ -66,8 +63,7 @@ namespace AmazonWebScrape
             }
         }
 
-
-        private static bool listFilter(string s)
+        static bool ListFilter(string s)
         {
             if (new[] { "Sponsored", "Our Brand", "Shop by Category" }.Any(x => s.Contains(x)))
             {
@@ -76,46 +72,46 @@ namespace AmazonWebScrape
             return false;
         }
 
-        /*private static void findSuggest()
+        static void FindSuggest()
         {
-            if (isElementPresent(By.Id("suggestions-template")))
+            if (IsElementPresent(By.Id("suggestions-template")))
             {
+                WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(3));
+                wait.Until(driver => driver.FindElement(By.Id("suggestions-template")));
                 element = driver.FindElement(By.Id("suggestions-template"));
 
-                for (int x = 0; x < 11; x++)
-                {
-                    IWebElement child = element.FindElement(By.Id("issDiv" + x));
 
-                    if (element.Text.Contains("in "))
+                IWebElement child = element.FindElement(By.Id("suggestions"));
+
+                anchors = child.FindElements(By.TagName("div"));
+
+                foreach (IWebElement s in anchors)
+                {
+                    if (s.Text.Contains("in "))
                     {
-                        autoSuggest.Add("To Department " + element.Text);
+                        autoSuggest.Add("To Department " + s.Text);
                     }
                     else
                     {
-                        autoSuggest.Add(element.Text);
+                        autoSuggest.Add(s.Text);
                     }
                 }
             }
-        }*/
 
-        private static void addResult(By s, List<string> r)
-        {
-            IWebElement temp;
-            if (isElementPresent(s))
+            //test
+            Console.WriteLine("Suggestions:");
+            foreach (string s in autoSuggest)
             {
-                temp = driver.FindElement(s);
-                r.Add(temp.Text);
+                Console.WriteLine(s);
             }
-            else
-            {
-                r.Add(null);
-            }
+            Console.WriteLine();
+            Console.WriteLine();
         }
 
-        private static void addResult(IWebElement e, By s, List<string> r)
+        static void AddResult(IWebElement e, By s, List<string> r)
         {
             IWebElement temp;
-            if (isElementPresent(e, s))
+            if (IsElementPresent(e, s))
             {
                 temp = e.FindElement(s);
                 r.Add(temp.Text);
@@ -126,9 +122,9 @@ namespace AmazonWebScrape
             }
         }
 
-        private static void findResults()
+        static void FindResults()
         {
-            if (isElementPresent(By.Id("atfResults")))
+            if (IsElementPresent(By.Id("atfResults")))
             {
                 element = driver.FindElement(By.Id("atfResults"));
 
@@ -136,42 +132,46 @@ namespace AmazonWebScrape
 
                 foreach (IWebElement e in anchors)
                 {
-                    if (listFilter(e.Text) == false)
+                    if (!(IsElementPresent(By.CssSelector("li[class='s-result-item celwidget acs-private-brands-container-background']"))))
                     {
-                        resElement = new List<string>();
-                        addResult(e, By.TagName("h2"), resElement);
-                        addResult(e, By.XPath("//descendant::div[1]/div[2]/span[2]"), resElement);
-                        addResult(e, By.TagName("h3"), resElement);
-                        addResult(e, By.CssSelector("span[class='a-offscreen']"), resElement);
-                        searchRes.Add(resElement);
+                        if (ListFilter(e.Text) == false)
+                        {
+                            resElement = new List<string>();
+                            AddResult(e, By.TagName("h2"), resElement);
+                            AddResult(e, By.XPath("//descendant::div[1]/div[2]/span[2]"), resElement);
+                            AddResult(e, By.TagName("h3"), resElement);
+                            AddResult(e, By.CssSelector("span[class='a-offscreen']"), resElement);
+                            searchRes.Add(resElement);
+                        }
                     }
                 }
+            }
 
-
-                foreach (List<string> s in searchRes)
+            //test
+            Console.WriteLine("Search Results:");
+            foreach (List<string> s in searchRes)
+            {
+                foreach (string ss in s)
                 {
-                    foreach (string ss in s)
-                    {
-                        Console.WriteLine(ss);
-                    }
-                    Console.WriteLine();
-                    Console.WriteLine();
+                    Console.WriteLine(ss);
                 }
+                Console.WriteLine();
+                Console.WriteLine();
             }
         }
 
-        private static void goToResult()
+        static void goToResult()
         {
-            if (isElementPresent(By.Id("result_0")))
+            if (IsElementPresent(By.Id("result_4")))
             {
-                element = driver.FindElement(By.Id("result_0"));
+                element = driver.FindElement(By.Id("result_4"));
                 element.FindElement(By.TagName("a")).Click();
             }
         }
 
-        private static void findDescription()
+        static void FindDescription()
         {
-            if (isElementPresent(By.Id("feature-bullets")))
+            if (IsElementPresent(By.Id("feature-bullets")))
             {
                 element = driver.FindElement(By.Id("feature-bullets"));
 
@@ -183,12 +183,21 @@ namespace AmazonWebScrape
                         resDesc.Add(e.Text);
                 }
             }
+
+            //test
+            Console.WriteLine("Result Description:");
+            foreach (string s in resDesc)
+            {
+                Console.WriteLine(s);
+            }
+            Console.WriteLine();
+            Console.WriteLine();
         }
 
 
-        public static void findTopFive()
+        static void FindTopFive()
         {
-            if (isElementPresent(By.Id("cr-medley-top-reviews-wrapper")))
+            if (IsElementPresent(By.Id("cr-medley-top-reviews-wrapper")))
             {
                 element = driver.FindElement(By.Id("cr-medley-top-reviews-wrapper"));
 
@@ -202,54 +211,88 @@ namespace AmazonWebScrape
                         break;
                     }
                     revElement = new List<string>();
-                    addResult(e, By.ClassName("a-profile-name"), revElement);
-                    addResult(e, By.CssSelector("a[data-hook='review-title']"), revElement);
-                    addResult(e.FindElement(By.CssSelector("i[data-hook='review-star-rating']")), By.CssSelector("span[class='a-icon-alt']"), revElement);
-                    addResult(e, By.CssSelector("span[data-hook='review-date']"), revElement);
-                    addResult(e, By.CssSelector("div[data-hook='review-collapsed']"), revElement);
+                    AddResult(e, By.ClassName("a-profile-name"), revElement);
+                    AddResult(e, By.CssSelector("a[data-hook='review-title']"), revElement);
+                    AddResult(e.FindElement(By.CssSelector("i[data-hook='review-star-rating']")), By.CssSelector("span[class='a-icon-alt']"), revElement);
+                    AddResult(e, By.CssSelector("span[data-hook='review-date']"), revElement);
+                    AddResult(e, By.CssSelector("div[data-hook='review-collapsed']"), revElement);
                     resReview.Add(revElement);
                     x++;
                 }
             }
+
+            //test
+            Console.WriteLine("Top 5 Reviews:");
+            foreach (List<string> s in resReview)
+            {
+                foreach (string ss in s)
+                {
+                    Console.WriteLine(ss);
+                }
+                Console.WriteLine();
+                Console.WriteLine();
+            }
         }
 
-        private static bool toExcel(ExcelPackage pack)
+        static void FindProdInfo()
         {
-            try
+            if (IsElementPresent(By.Id("prodDetails")))
             {
-                ExcelWorksheet ws = pack.Workbook.Worksheets.Add("Amazon Suggestions " + autoSuggest[0]);
+                element = driver.FindElement(By.Id("prodDetails"));
+                anchors = element.FindElements(By.TagName("tr"));
 
-
-                for (int x = 0; x < autoSuggest.Count; x++)
+                foreach (IWebElement e in anchors)
                 {
-                    ws.Cells[x + 1, 1].Value = autoSuggest[x];
+                    prodRow = new List<string>();
+                    AddResult(e, By.TagName("th"), prodRow);
+                    AddResult(e, By.TagName("td"), prodRow);
+                    prodInfo.Add(prodRow);
                 }
-                ws.Cells[ws.Dimension.Address].AutoFitColumns();
-
-                ws = pack.Workbook.Worksheets.Add("Amazon Search Results " + autoSuggest[0]);
-
-                ws.Cells["A1"].Value = "Product Name";
-                ws.Cells["B1"].Value = "Product Seller";
-                ws.Cells["C1"].Value = "Product Type";
-                ws.Cells["D1"].Value = "Product Price";
-
-                for (int x = 0; x < searchRes.Count; x++)
-                {
-                    for (int y = 0; y < searchRes[x].Count; y++)
-                    {
-                        ws.Cells[x + 2, y + 1].Value = searchRes[x][y];
-                    }
-                }
-
-                ws.Cells[ws.Dimension.Address].AutoFitColumns();
-
-                return true;
             }
-            catch (Exception e)
+
+            //test
+            Console.WriteLine("Product's Information:");
+            foreach (List<string> s in prodInfo)
             {
-                return false;
+                foreach (string ss in s)
+                {
+                    Console.Write(ss + "\t");
+                }
+                Console.WriteLine();
             }
+            Console.WriteLine();
+            Console.WriteLine();
         }
+
+
+        //static void ToExcel(ExcelPackage pack)
+        //{
+        //    ExcelWorksheet ws = pack.Workbook.Worksheets.Add("Amazon Suggestions " + autoSuggest[0]);
+
+        //    for (int x = 0; x < autoSuggest.Count; x++)
+        //    {
+        //        ws.Cells[x + 1, 1].Value = autoSuggest[x];
+        //    }
+        //    ws.Cells[ws.Dimension.Address].AutoFitColumns();
+
+        //    ws = pack.Workbook.Worksheets.Add("Amazon Search Results " + autoSuggest[0]);
+
+        //    ws.Cells["A1"].Value = "Product Name";
+        //    ws.Cells["B1"].Value = "Product Seller";
+        //    ws.Cells["C1"].Value = "Product Type";
+        //    ws.Cells["D1"].Value = "Product Price";
+
+        //    for (int x = 0; x < searchRes.Count; x++)
+        //    {
+        //        for (int y = 0; y < searchRes[x].Count; y++)
+        //        {
+        //            ws.Cells[x + 2, y + 1].Value = searchRes[x][y];
+        //        }
+        //    }
+
+        //    ws.Cells[ws.Dimension.Address].AutoFitColumns();
+
+        //}
 
         //Main Function
         public static void Main(string[] args)
@@ -260,30 +303,33 @@ namespace AmazonWebScrape
 
             Setup();
 
-            driver.Url = "www.amazon.com";
-            //driver.Navigate().GoToUrl("www.amazon.com");
+            driver.Url = "https://www.amazon.com";
+
+            //driver.Navigate().GoToUrl("https://www.amazon.com");
 
             IWebElement searchBox = driver.FindElement(By.Id("twotabsearchtextbox"));
 
             searchBox.SendKeys("USB C Cable");
 
-            //findSuggest();
+            FindSuggest();
 
             driver.FindElement(By.ClassName("nav-input")).Click();
 
-            findResults();
+            FindResults();
 
             goToResult();
 
-            findDescription();
+            FindDescription();
 
-            findTopFive();
+            FindTopFive();
 
-            //toExcel(pack);
+            FindProdInfo();
 
-            // pack.SaveAs(fileName);
+            //ToExcel(pack);
 
-            //driver.Close();
+            //pack.SaveAs(fileName);
+
+            driver.Close();
 
             //driver.Quit();
         }
