@@ -9,6 +9,7 @@
 using System;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OfficeOpenXml;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -29,7 +30,8 @@ namespace SeleniumTest
         static List<List<string>> resReview = new List<List<string>>();
         static List<string> prodRow;
         static List<List<string>> prodInfo = new List<List<string>>();
-
+        // static ExcelPackage pack = new ExcelPackage();
+        //static FileInfo fileName = new FileInfo("C:/Users/JC5044528/Desktop/Amazon.xlsx");
         static void Setup()
         {
             driver = new ChromeDriver();
@@ -97,27 +99,22 @@ namespace SeleniumTest
                     }
                 }
             }
-
-            //test
-            Console.WriteLine("Suggestions:");
-            foreach (string s in autoSuggest)
-            {
-                Console.WriteLine(s);
-            }
-            Console.WriteLine();
-            Console.WriteLine();
+            //SuggestToExcel();
         }
 
         static void AddResult(IWebElement e, By s, List<string> r)
         {
             IWebElement temp;
+            Console.WriteLine(e.Text);
             if (IsElementPresent(e, s))
             {
                 temp = e.FindElement(s);
+                //Console.WriteLine(temp.Text);
                 r.Add(temp.Text);
             }
             else
             {
+                //Console.WriteLine("null");
                 r.Add(null);
             }
         }
@@ -132,13 +129,14 @@ namespace SeleniumTest
 
                 foreach (IWebElement e in anchors)
                 {
-                    if (!(IsElementPresent(By.CssSelector("li[class='s-result-item celwidget acs-private-brands-container-background']"))))
+                    if (ListFilter(e.Text) == false)
                     {
-                        if (ListFilter(e.Text) == false)
+                        if (!(IsElementPresent(By.CssSelector("li[class='s-result-item celwidget acs-private-brands-container-background']"))))
                         {
                             resElement = new List<string>();
                             AddResult(e, By.TagName("h2"), resElement);
                             AddResult(e, By.XPath("//descendant::div[1]/div[2]/span[2]"), resElement);
+                            //work on this
                             AddResult(e, By.TagName("h3"), resElement);
                             AddResult(e, By.CssSelector("span[class='a-offscreen']"), resElement);
                             searchRes.Add(resElement);
@@ -146,18 +144,18 @@ namespace SeleniumTest
                     }
                 }
             }
-
+            //ResultsToExcel();
             //test
-            Console.WriteLine("Search Results:");
-            foreach (List<string> s in searchRes)
-            {
-                foreach (string ss in s)
-                {
-                    Console.WriteLine(ss);
-                }
-                Console.WriteLine();
-                Console.WriteLine();
-            }
+            ////Console.WriteLine("Search Results:");
+            ////foreach (List<string> s in searchRes)
+            ////{
+            //    //foreach (string ss in s)
+            //    //{
+            //    //    Console.WriteLine(ss);
+            //    //}
+            //    //Console.WriteLine();
+            //    //Console.WriteLine();
+            //}
         }
 
         static void goToResult()
@@ -183,15 +181,24 @@ namespace SeleniumTest
                         resDesc.Add(e.Text);
                 }
             }
+        }
 
-            //test
-            Console.WriteLine("Result Description:");
-            foreach (string s in resDesc)
+        static void FindProdInfo()
+        {
+            if (IsElementPresent(By.Id("prodDetails")))
             {
-                Console.WriteLine(s);
+                element = driver.FindElement(By.Id("prodDetails"));
+                anchors = element.FindElements(By.TagName("tr"));
+
+                foreach (IWebElement e in anchors)
+                {
+                    prodRow = new List<string>();
+                    AddResult(e, By.TagName("th"), prodRow);
+                    AddResult(e, By.TagName("td"), prodRow);
+                    prodInfo.Add(prodRow);
+                }
             }
-            Console.WriteLine();
-            Console.WriteLine();
+            //ProductToExcel();
         }
 
 
@@ -220,52 +227,10 @@ namespace SeleniumTest
                     x++;
                 }
             }
-
-            //test
-            Console.WriteLine("Top 5 Reviews:");
-            foreach (List<string> s in resReview)
-            {
-                foreach (string ss in s)
-                {
-                    Console.WriteLine(ss);
-                }
-                Console.WriteLine();
-                Console.WriteLine();
-            }
+            //ReviewsToExcel();
         }
 
-        static void FindProdInfo()
-        {
-            if (IsElementPresent(By.Id("prodDetails")))
-            {
-                element = driver.FindElement(By.Id("prodDetails"));
-                anchors = element.FindElements(By.TagName("tr"));
-
-                foreach (IWebElement e in anchors)
-                {
-                    prodRow = new List<string>();
-                    AddResult(e, By.TagName("th"), prodRow);
-                    AddResult(e, By.TagName("td"), prodRow);
-                    prodInfo.Add(prodRow);
-                }
-            }
-
-            //test
-            Console.WriteLine("Product's Information:");
-            foreach (List<string> s in prodInfo)
-            {
-                foreach (string ss in s)
-                {
-                    Console.Write(ss + "\t");
-                }
-                Console.WriteLine();
-            }
-            Console.WriteLine();
-            Console.WriteLine();
-        }
-
-
-        //static void ToExcel(ExcelPackage pack)
+        //static void SuggestToExcel()
         //{
         //    ExcelWorksheet ws = pack.Workbook.Worksheets.Add("Amazon Suggestions " + autoSuggest[0]);
 
@@ -274,7 +239,10 @@ namespace SeleniumTest
         //        ws.Cells[x + 1, 1].Value = autoSuggest[x];
         //    }
         //    ws.Cells[ws.Dimension.Address].AutoFitColumns();
+        //}
 
+        //static void ResultsToExcel()
+        //{
         //    ws = pack.Workbook.Worksheets.Add("Amazon Search Results " + autoSuggest[0]);
 
         //    ws.Cells["A1"].Value = "Product Name";
@@ -289,19 +257,66 @@ namespace SeleniumTest
         //            ws.Cells[x + 2, y + 1].Value = searchRes[x][y];
         //        }
         //    }
-
         //    ws.Cells[ws.Dimension.Address].AutoFitColumns();
-
         //}
+
+        //static void ProductToExcel()
+        //{
+        //    ExcelWorksheet ws = pack.Workbook.Worksheets.Add(searchRes[3][0]);
+
+        //    for (int x = 0; x < resDesc.Count; x++)
+        //    {
+        //        ws.Cells[x + 1, 1].Value = autoSuggest[x];
+        //    }
+
+        //    for (int x = 0; x < prodInfo.Count; x++)
+        //    {
+        //        for (int y = 0; y < prodInfo[x].Count; y++)
+        //        {
+        //            ws.Cells[x + resDesc.Count + 2, y + 1].Value = prodInfo[x][y];
+        //        }
+        //    }
+        //    ws.Cells[ws.Dimension.Address].AutoFitColumns();
+        //}
+
+        //static void ReviewsToExcel()
+        //{
+        //    ws = pack.Workbook.Worksheets.Add("Product Reviews " + searchRes[3][0]);
+
+        //    ws.Cells["A1"].Value = "User Name";
+        //    ws.Cells["A2"].Value = "Review Title";
+        //    ws.Cells["A3"].Value = "Star Rating";
+        //    ws.Cells["A4"].Value = "Date of Review";  
+        //    ws.Cells["A5"].Value = "Review:";
+        //    int count = 0;
+        //    for (int x = 0; x < searchRes.Count; x++)
+        //    {
+        //        for (int y = 0; y < searchRes[x].Count; y++)
+        //        {
+        //            ws.Cells[1, y + count + 1].Value = "User Name";
+        //            ws.Cells[2, y + count + 1].Value = searchRes[x][y];
+        //            ws.Cells[1, y + count + 1].Value = "Review Title";
+        //            ws.Cells[2, y + count + 1].Value = searchRes[x][y];
+        //            ws.Cells[1, y + count + 1].Value = "Star Rating";
+        //            ws.Cells[2, y + count + 1].Value = searchRes[x][y];
+        //            ws.Cells[1, y + count + 1].Value = "Date of Review";
+        //            ws.Cells[2, y + count + 1].Value = searchRes[x][y];
+        //            ws.Cells[1, y + count + 1].Value = "Review:";
+        //            ws.Cells[2, y + count + 1].Value = searchRes[x][y];
+        //        }
+        //    count += 6;
+        //    }
+        //    ws.Cells[ws.Dimension.Address].AutoFitColumns();
+        //}
+
 
         //Main Function
         public static void Main(string[] args)
         {
-            // ExcelPackage pack = new ExcelPackage();
-
-            //FileInfo fileName = new FileInfo("C:/Users/JC5044528/Desktop/Amazon.xlsx");
 
             Setup();
+
+
 
             driver.Url = "https://www.amazon.com";
 
@@ -311,19 +326,20 @@ namespace SeleniumTest
 
             searchBox.SendKeys("USB C Cable");
 
-            FindSuggest();
+            //FindSuggest();
+
 
             driver.FindElement(By.ClassName("nav-input")).Click();
 
             FindResults();
 
-            goToResult();
+            //goToResult();
 
-            FindDescription();
+            //FindDescription();
 
-            FindTopFive();
+            //FindTopFive();
 
-            FindProdInfo();
+            //FindProdInfo();
 
             //ToExcel(pack);
 

@@ -1135,23 +1135,6 @@
             <param name="characters">The number of characters to read.</param>
             <returns>The string with the next characters.</returns>
         </member>
-        <member name="M:AngleSharp.TextSource.ReadCharacterAsync(System.Threading.CancellationToken)">
-            <summary>
-            Reads the next character from the buffer or underlying stream
-            asynchronously, if any.
-            </summary>
-            <param name="cancellationToken">The cancellation token.</param>
-            <returns>The task resulting in the next character.</returns>
-        </member>
-        <member name="M:AngleSharp.TextSource.ReadCharactersAsync(System.Int32,System.Threading.CancellationToken)">
-            <summary>
-            Reads the upcoming numbers of characters from the buffer or
-            underlying stream asynchronously.
-            </summary>
-            <param name="characters">The number of characters to read.</param>
-            <param name="cancellationToken">The cancellation token.</param>
-            <returns>The string with the next characters.</returns>
-        </member>
         <member name="M:AngleSharp.TextSource.PrefetchAsync(System.Int32,System.Threading.CancellationToken)">
             <summary>
             Prefetches the number of bytes by expanding the internal buffer.
@@ -27035,6 +27018,20 @@
             <param name="link">The link to examine.</param>
             <returns>True if the link hosts an alternate stylesheet.</returns>
         </member>
+        <member name="T:AngleSharp.Extensions.TokenizerExtensions">
+            <summary>
+            Extensions to access the underying tokenizer.
+            </summary>
+        </member>
+        <member name="M:AngleSharp.Extensions.TokenizerExtensions.Tokenize(AngleSharp.TextSource,AngleSharp.Services.IEntityProvider,System.EventHandler{AngleSharp.Dom.Events.HtmlErrorEvent})">
+            <summary>
+            Performs the tokenization on the given text source.
+            </summary>
+            <param name="source">The source of the tokenization.</param>
+            <param name="provider">The custom entity provider, if any.</param>
+            <param name="errorHandler">The error handler to be used, if any.</param>
+            <returns>A stream of consumed tokens.</returns>
+        </member>
         <member name="T:AngleSharp.Extensions.ValueConverterExtensions">
             <summary>
             Essential extensions for using the value converters.
@@ -35607,6 +35604,14 @@
             <summary>
             The abstract base class of any HTML token.
             </summary>
+        </member>
+        <member name="M:AngleSharp.Parser.Html.HtmlToken.#ctor(AngleSharp.Parser.Html.HtmlTokenType,AngleSharp.TextPosition,System.String)">
+            <summary>
+            Creates a new HTML token.
+            </summary>
+            <param name="type">The exact type of the token.</param>
+            <param name="position">The token's text position.</param>
+            <param name="name">The optional name of the token, if any.</param>
         </member>
         <member name="P:AngleSharp.Parser.Html.HtmlToken.IsEmpty">
             <summary>
