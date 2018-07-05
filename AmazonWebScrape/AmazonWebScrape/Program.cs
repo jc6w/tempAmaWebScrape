@@ -14,6 +14,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using OpenQA.Selenium.Support.UI;
+using System.IO;
+using OfficeOpenXml.Style;
 
 namespace SeleniumTest
 {
@@ -30,8 +32,7 @@ namespace SeleniumTest
         static List<List<string>> resReview = new List<List<string>>();
         static List<string> prodRow;
         static List<List<string>> prodInfo = new List<List<string>>();
-        // static ExcelPackage pack = new ExcelPackage();
-        //static FileInfo fileName = new FileInfo("C:/Users/JC5044528/Desktop/Amazon.xlsx");
+
         static void Setup()
         {
             driver = new ChromeDriver();
@@ -74,13 +75,15 @@ namespace SeleniumTest
             return false;
         }
 
-        static void FindSuggest()
+        static void FindSuggest(ExcelPackage pack)
         {
             if (IsElementPresent(By.Id("suggestions-template")))
             {
                 WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(3));
                 wait.Until(driver => driver.FindElement(By.Id("suggestions-template")));
                 element = driver.FindElement(By.Id("suggestions-template"));
+
+
 
 
                 IWebElement child = element.FindElement(By.Id("suggestions"));
@@ -98,28 +101,36 @@ namespace SeleniumTest
                         autoSuggest.Add(s.Text);
                     }
                 }
-            }
-            //SuggestToExcel();
+            } 
+            SuggestToExcel(pack);
         }
 
         static void AddResult(IWebElement e, By s, List<string> r)
         {
             IWebElement temp;
-            Console.WriteLine(e.Text);
+            string text = "";
             if (IsElementPresent(e, s))
             {
                 temp = e.FindElement(s);
-                //Console.WriteLine(temp.Text);
-                r.Add(temp.Text);
+                if (temp.Text == null || temp.Text == "")
+                {
+                    text = temp.GetAttribute("innerHTML");
+                }
+                else
+                {
+                    text = temp.Text;
+                }
+                text.TrimEnd('\0');
+                text.TrimEnd(' ');
+                r.Add(text);
             }
             else
             {
-                //Console.WriteLine("null");
                 r.Add(null);
             }
         }
 
-        static void FindResults()
+        static void FindResults(ExcelPackage pack)
         {
             if (IsElementPresent(By.Id("atfResults")))
             {
@@ -131,12 +142,12 @@ namespace SeleniumTest
                 {
                     if (ListFilter(e.Text) == false)
                     {
-                        if (!(IsElementPresent(By.CssSelector("li[class='s-result-item celwidget acs-private-brands-container-background']"))))
+                        if (e.GetAttribute("class") == "s-result-item celwidget  ")
                         {
                             resElement = new List<string>();
+                            //good
                             AddResult(e, By.TagName("h2"), resElement);
-                            AddResult(e, By.XPath("//descendant::div[1]/div[2]/span[2]"), resElement);
-                            //work on this
+                            AddResult(e, By.CssSelector("span[class='a-size-small a-color-secondary']:nth-of-type(2)"), resElement);
                             AddResult(e, By.TagName("h3"), resElement);
                             AddResult(e, By.CssSelector("span[class='a-offscreen']"), resElement);
                             searchRes.Add(resElement);
@@ -144,18 +155,9 @@ namespace SeleniumTest
                     }
                 }
             }
-            //ResultsToExcel();
+
+            ResultsToExcel(pack);
             //test
-            ////Console.WriteLine("Search Results:");
-            ////foreach (List<string> s in searchRes)
-            ////{
-            //    //foreach (string ss in s)
-            //    //{
-            //    //    Console.WriteLine(ss);
-            //    //}
-            //    //Console.WriteLine();
-            //    //Console.WriteLine();
-            //}
         }
 
         static void goToResult()
@@ -183,7 +185,7 @@ namespace SeleniumTest
             }
         }
 
-        static void FindProdInfo()
+        static void FindProdInfo(ExcelPackage pack)
         {
             if (IsElementPresent(By.Id("prodDetails")))
             {
@@ -198,11 +200,11 @@ namespace SeleniumTest
                     prodInfo.Add(prodRow);
                 }
             }
-            //ProductToExcel();
+            ProductToExcel(pack);
         }
 
 
-        static void FindTopFive()
+        static void FindTopFive(ExcelPackage pack)
         {
             if (IsElementPresent(By.Id("cr-medley-top-reviews-wrapper")))
             {
@@ -227,127 +229,132 @@ namespace SeleniumTest
                     x++;
                 }
             }
-            //ReviewsToExcel();
+            ReviewsToExcel(pack);
         }
 
-        //static void SuggestToExcel()
-        //{
-        //    ExcelWorksheet ws = pack.Workbook.Worksheets.Add("Amazon Suggestions " + autoSuggest[0]);
+        static void SuggestToExcel(ExcelPackage pack)
+        {
+            ExcelWorksheet ws = pack.Workbook.Worksheets.Add("Amazon Suggestions " + autoSuggest[0]);
 
-        //    for (int x = 0; x < autoSuggest.Count; x++)
-        //    {
-        //        ws.Cells[x + 1, 1].Value = autoSuggest[x];
-        //    }
-        //    ws.Cells[ws.Dimension.Address].AutoFitColumns();
-        //}
+            for (int x = 0; x < autoSuggest.Count; x++)
+            {
+                ws.Cells[x + 1, 1].Value = autoSuggest[x];
+            }
+            ws.Cells[ws.Dimension.Address].AutoFitColumns();
+        }
 
-        //static void ResultsToExcel()
-        //{
-        //    ws = pack.Workbook.Worksheets.Add("Amazon Search Results " + autoSuggest[0]);
+        static void ResultsToExcel(ExcelPackage pack)
+        {
+            ExcelWorksheet ws = pack.Workbook.Worksheets.Add("Amazon Search Results " + autoSuggest[0]);
 
-        //    ws.Cells["A1"].Value = "Product Name";
-        //    ws.Cells["B1"].Value = "Product Seller";
-        //    ws.Cells["C1"].Value = "Product Type";
-        //    ws.Cells["D1"].Value = "Product Price";
+            ws.Cells["A1:D1"].Style.Font.Bold = true;
+            ws.Cells["A1:D1"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            ws.Cells["A1:D1"].Style.VerticalAlignment = ExcelVerticalAlignment.Top;
+            ws.Cells["A1"].Value = "Product Name";
+            ws.Cells["B1"].Value = "Product Seller";
+            ws.Cells["C1"].Value = "Product Type";
+            ws.Cells["D1"].Value = "Product Price";
+            for (int x = 0; x < searchRes.Count; x++)
+            {
+                for (int y = 0; y < searchRes[x].Count; y++)
+                {
+                    ws.Cells[x + 2, y + 1].Value = searchRes[x][y];
+                }
+            }
+            ws.Cells["B"].AutoFitColumns();
+            ws.Column(1).Width = 100;
+            ws.Cells[ws.Dimension.Address].Style.WrapText = true;
+        }
 
-        //    for (int x = 0; x < searchRes.Count; x++)
-        //    {
-        //        for (int y = 0; y < searchRes[x].Count; y++)
-        //        {
-        //            ws.Cells[x + 2, y + 1].Value = searchRes[x][y];
-        //        }
-        //    }
-        //    ws.Cells[ws.Dimension.Address].AutoFitColumns();
-        //}
+        static void ProductToExcel(ExcelPackage pack)
+        {
+            ExcelWorksheet ws = pack.Workbook.Worksheets.Add(searchRes[3][0]);
+            ws.Column(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+            ws.Column(1).Style.VerticalAlignment = ExcelVerticalAlignment.Top;
+            ws.Cells["A1"].Style.Font.Bold = true;
+            ws.Cells["A1"].Value = "Product Description:";
+            for (int x = 0; x < resDesc.Count; x++)
+            {
+                ws.Cells[x + 2, 1].Value = resDesc[x];
+            }
+            ws.Cells[resDesc.Count + 2, 1].Style.Font.Bold = true;
+            ws.Cells[resDesc.Count + 2, 1].Value = "More Information";
 
-        //static void ProductToExcel()
-        //{
-        //    ExcelWorksheet ws = pack.Workbook.Worksheets.Add(searchRes[3][0]);
+            for (int x = 0; x < prodInfo.Count; x++)
+            {
+                ws.Cells[x + resDesc.Count + 3, 1].Style.Font.Bold = true;
+                for (int y = 0; y < prodInfo[x].Count; y++)
+                {
+                    ws.Cells[x + resDesc.Count + 3, y + 1].Value = prodInfo[x][y];
+                }
+            }
+            ws.Cells["B"].AutoFitColumns();
+            ws.Column(1).Style.WrapText = true;
+            ws.Column(1).Width = 100;
 
-        //    for (int x = 0; x < resDesc.Count; x++)
-        //    {
-        //        ws.Cells[x + 1, 1].Value = autoSuggest[x];
-        //    }
+        }
 
-        //    for (int x = 0; x < prodInfo.Count; x++)
-        //    {
-        //        for (int y = 0; y < prodInfo[x].Count; y++)
-        //        {
-        //            ws.Cells[x + resDesc.Count + 2, y + 1].Value = prodInfo[x][y];
-        //        }
-        //    }
-        //    ws.Cells[ws.Dimension.Address].AutoFitColumns();
-        //}
+        static void ReviewsToExcel(ExcelPackage pack)
+        {
+            ExcelWorksheet ws = pack.Workbook.Worksheets.Add("Product Reviews " + searchRes[3][0]);
 
-        //static void ReviewsToExcel()
-        //{
-        //    ws = pack.Workbook.Worksheets.Add("Product Reviews " + searchRes[3][0]);
+            ws.Column(1).Style.Font.Bold = true;
+            ws.Column(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+            ws.Column(1).Style.VerticalAlignment = ExcelVerticalAlignment.Top;
 
-        //    ws.Cells["A1"].Value = "User Name";
-        //    ws.Cells["A2"].Value = "Review Title";
-        //    ws.Cells["A3"].Value = "Star Rating";
-        //    ws.Cells["A4"].Value = "Date of Review";  
-        //    ws.Cells["A5"].Value = "Review:";
-        //    int count = 0;
-        //    for (int x = 0; x < searchRes.Count; x++)
-        //    {
-        //        for (int y = 0; y < searchRes[x].Count; y++)
-        //        {
-        //            ws.Cells[1, y + count + 1].Value = "User Name";
-        //            ws.Cells[2, y + count + 1].Value = searchRes[x][y];
-        //            ws.Cells[1, y + count + 1].Value = "Review Title";
-        //            ws.Cells[2, y + count + 1].Value = searchRes[x][y];
-        //            ws.Cells[1, y + count + 1].Value = "Star Rating";
-        //            ws.Cells[2, y + count + 1].Value = searchRes[x][y];
-        //            ws.Cells[1, y + count + 1].Value = "Date of Review";
-        //            ws.Cells[2, y + count + 1].Value = searchRes[x][y];
-        //            ws.Cells[1, y + count + 1].Value = "Review:";
-        //            ws.Cells[2, y + count + 1].Value = searchRes[x][y];
-        //        }
-        //    count += 6;
-        //    }
-        //    ws.Cells[ws.Dimension.Address].AutoFitColumns();
-        //}
+            int count = 1;
+            for (int x = 0; x < resReview.Count; x++)
+            {
+                ws.Cells[x + count, 1].Value = "User Name";
+                ws.Cells[x + count + 1, 1].Value = "Review Title";
+                ws.Cells[x + count + 2, 1].Value = "Star Rating";
+                ws.Cells[x + count + 3, 1].Value = "Date of Review";
+                ws.Cells[x + count + 4, 1].Value = "Review";
 
+                for (int y = 0; y < resReview[x].Count; y++)
+                {
+                    
+                        ws.Cells[y + x + count, 2].Value = resReview[x][y];
+                }
+                count += 5;
+            }
+            ws.Cells["A"].AutoFitColumns();
+            ws.Column(2).Width = 100;
+            ws.Cells[ws.Dimension.Address].Style.WrapText = true;
+        }
 
-        //Main Function
         public static void Main(string[] args)
         {
+            ExcelPackage pack = new ExcelPackage();
+            FileInfo fileName = new FileInfo("/Users/jmcw/Downloads/Amazon.xlsx");
 
             Setup();
 
-
-
             driver.Url = "https://www.amazon.com";
-
-            //driver.Navigate().GoToUrl("https://www.amazon.com");
 
             IWebElement searchBox = driver.FindElement(By.Id("twotabsearchtextbox"));
 
             searchBox.SendKeys("USB C Cable");
 
-            //FindSuggest();
-
+            FindSuggest(pack);
 
             driver.FindElement(By.ClassName("nav-input")).Click();
 
-            FindResults();
+            FindResults(pack);
 
-            //goToResult();
+            goToResult();
 
-            //FindDescription();
+            FindDescription();
 
-            //FindTopFive();
+            FindTopFive(pack);
 
-            //FindProdInfo();
+            FindProdInfo(pack);
 
-            //ToExcel(pack);
+            pack.SaveAs(fileName);
 
-            //pack.SaveAs(fileName);
+            //driver.Close();
 
-            driver.Close();
-
-            //driver.Quit();
-        }
+            driver.Quit();
+        } 
     }
 }
